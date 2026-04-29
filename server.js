@@ -1,20 +1,21 @@
 const express = require("express");
+const cors = require("cors");
+const { getStream } = require("./extractor");
+
 const app = express();
+app.use(cors());
 
-app.get("/player", (req, res) => {
-  const { id, ep } = req.query;
+app.get("/stream", async (req, res) => {
+  try {
+    const { id, ep } = req.query;
 
-  res.send(`
-    <html>
-      <body style="margin:0;background:black;">
-        <iframe 
-          src="https://megaplay.buzz/stream/mal/${id}/${ep}/sub"
-          width="100%" height="100%" frameborder="0" allowfullscreen>
-        </iframe>
-      </body>
-    </html>
-  `);
+    const stream = await getStream(id, ep);
+
+    res.json({ url: stream });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to extract stream" });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Running on " + PORT));
+app.listen(PORT, () => console.log("Running on", PORT));
