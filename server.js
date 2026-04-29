@@ -8,11 +8,9 @@ const app = express();
 app.use(cors());
 
 function getChromePath() {
-  const base = path.join(__dirname, "chrome");
-
+  const base = "/opt/render/project/chrome";
   const folders = fs.readdirSync(base);
   const chromeFolder = folders.find(f => f.includes("chrome"));
-
   return path.join(base, chromeFolder, "chrome-linux64", "chrome");
 }
 
@@ -54,7 +52,6 @@ app.get("/stream", async (req, res) => {
 
       const source = document.querySelector("source");
       if (source && source.src) return source.src;
-
       return null;
     });
 
