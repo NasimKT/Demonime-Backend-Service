@@ -1,7 +1,14 @@
-// server.js
 const express = require("express");
 const cors = require("cors");
 const { chromium } = require("playwright");
+const { execSync } = require("child_process");
+
+// Install browser at runtime (survives Render's build/deploy split)
+try {
+  execSync("npx playwright install chromium", { stdio: "inherit" });
+} catch (e) {
+  console.log("playwright install warning:", e.message);
+}
 
 const app = express();
 app.use(cors());
@@ -29,7 +36,7 @@ app.get("/stream", async (req, res) => {
 
     let streamUrl = null;
 
-    page.on("response", async (response) => {
+    page.on("response", (response) => {
       const u = response.url();
       if (!streamUrl && (u.includes(".m3u8") || u.includes(".mp4"))) {
         streamUrl = u;
@@ -37,11 +44,8 @@ app.get("/stream", async (req, res) => {
     });
 
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-
-    // Wait up to 15s for network stream to appear
     await page.waitForTimeout(15000);
 
-    // Fallback: check DOM
     if (!streamUrl) {
       streamUrl = await page.evaluate(() => {
         const video = document.querySelector("video");
@@ -52,7 +56,6 @@ app.get("/stream", async (req, res) => {
     }
 
     console.log("STREAM:", streamUrl);
-
     if (!streamUrl) throw new Error("No stream found");
 
     res.json({ url: streamUrl });
