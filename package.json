@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "postinstall": "npx puppeteer browsers install chrome --path=./chrome"
+    "postinstall": "npx puppeteer browsers install chrome --path=/opt/render/project/chrome"
   },
   "dependencies": {
     "express": "^4.18.2",
