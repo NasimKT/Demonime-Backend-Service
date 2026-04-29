@@ -20,13 +20,11 @@ app.get("/stream", async (req, res) => {
     console.log("Launching browser...");
 
     browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
       headless: "new",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu"
+        "--disable-dev-shm-usage"
       ]
     });
 
@@ -65,5 +63,4 @@ app.get("/stream", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Running on", PORT));
+app.listen(10000, () => console.log("Running on 10000"));
