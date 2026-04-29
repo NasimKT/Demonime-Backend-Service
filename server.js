@@ -1,11 +1,20 @@
 const express = require("express");
 const cors = require("cors");
 const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 
-const CHROME_PATH = "/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome";
+function getChromePath() {
+  const base = path.join(__dirname, "chrome");
+
+  const folders = fs.readdirSync(base);
+  const chromeFolder = folders.find(f => f.includes("chrome"));
+
+  return path.join(base, chromeFolder, "chrome-linux64", "chrome");
+}
 
 app.get("/stream", async (req, res) => {
   const { id, ep } = req.query;
@@ -14,20 +23,20 @@ app.get("/stream", async (req, res) => {
   console.log("ID:", id, "EP:", ep);
 
   const url = `https://megaplay.buzz/stream/mal/${id}/${ep}/sub`;
-  console.log("URL:", url);
-  console.log("Using Chrome at:", CHROME_PATH);
 
   let browser;
 
   try {
+    const CHROME_PATH = getChromePath();
+    console.log("Using Chrome:", CHROME_PATH);
+
     browser = await puppeteer.launch({
       executablePath: CHROME_PATH,
       headless: "new",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu"
+        "--disable-dev-shm-usage"
       ]
     });
 
