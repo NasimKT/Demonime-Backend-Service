@@ -5,6 +5,8 @@ const puppeteer = require("puppeteer");
 const app = express();
 app.use(cors());
 
+const CHROME_PATH = "/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome";
+
 app.get("/stream", async (req, res) => {
   const { id, ep } = req.query;
 
@@ -13,18 +15,19 @@ app.get("/stream", async (req, res) => {
 
   const url = `https://megaplay.buzz/stream/mal/${id}/${ep}/sub`;
   console.log("URL:", url);
+  console.log("Using Chrome at:", CHROME_PATH);
 
   let browser;
 
   try {
-    console.log("Launching browser...");
-
     browser = await puppeteer.launch({
+      executablePath: CHROME_PATH,
       headless: "new",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage"
+        "--disable-dev-shm-usage",
+        "--disable-gpu"
       ]
     });
 
@@ -34,10 +37,7 @@ app.get("/stream", async (req, res) => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
     );
 
-    console.log("Opening page...");
     await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
-
-    console.log("Extracting video...");
 
     const stream = await page.evaluate(() => {
       const video = document.querySelector("video");
