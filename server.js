@@ -11,7 +11,12 @@ function getChromePath() {
   const base = "/opt/render/project/chrome";
   const folders = fs.readdirSync(base);
   const chromeFolder = folders.find(f => f.includes("chrome"));
-  return path.join(base, chromeFolder, "chrome-linux64", "chrome");
+  const inner = path.join(base, chromeFolder);
+  const subFolders = fs.readdirSync(inner);
+  const linuxFolder = subFolders.find(f => f.includes("linux")) ?? "";
+  return linuxFolder
+    ? path.join(inner, linuxFolder, "chrome")
+    : path.join(inner, "chrome");
 }
 
 app.get("/stream", async (req, res) => {
