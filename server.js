@@ -16,36 +16,49 @@ app.use(cors());
 app.get("/stream", async (req, res) => {
   const { id, ep } = req.query;
 
-  console.log("---- NEW REQUEST ----");
-  console.log("ID:", id, "EP:", ep);
-
   const url = `https://megaplay.buzz/stream/mal/${id}/${ep}/sub`;
 
   let browser;
   try {
     browser = await chromium.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
 
     await page.setExtraHTTPHeaders({
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
     });
 
     let streamUrl = null;
 
-    page.on("response", (response) => {
-      const u = response.url();
+    // 🔥 capture ALL requests (not just response)
+    page.on("request", (req) => {
+      const u = req.url();
       if (!streamUrl && (u.includes(".m3u8") || u.includes(".mp4"))) {
+        console.log("🎯 FOUND STREAM:", u);
         streamUrl = u;
       }
     });
 
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(15000);
+    console.log("Opening page...");
+    await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
 
+    // 🔥 simulate user click (IMPORTANT)
+    try {
+      await page.mouse.click(300, 300);
+      console.log("Clicked player");
+    } catch {}
+
+    // 🔥 wait longer for network
+    for (let i = 0; i < 20; i++) {
+      if (streamUrl) break;
+      await page.waitForTimeout(1000);
+    }
+
+    // fallback DOM check
     if (!streamUrl) {
       streamUrl = await page.evaluate(() => {
         const video = document.querySelector("video");
@@ -55,7 +68,8 @@ app.get("/stream", async (req, res) => {
       });
     }
 
-    console.log("STREAM:", streamUrl);
+    console.log("FINAL STREAM:", streamUrl);
+
     if (!streamUrl) throw new Error("No stream found");
 
     res.json({ url: streamUrl });
