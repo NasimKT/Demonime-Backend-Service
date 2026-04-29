@@ -3,7 +3,6 @@ const cors = require("cors");
 const { chromium } = require("playwright");
 const { execSync } = require("child_process");
 
-// Install browser at runtime (survives Render's build/deploy split)
 try {
   execSync("npx playwright install chromium", { stdio: "inherit" });
 } catch (e) {
@@ -13,73 +12,49 @@ try {
 const app = express();
 app.use(cors());
 
-app.get("/stream", async (req, res) => {
+// DEBUG: log all requests to find stream URL pattern
+app.get("/debug", async (req, res) => {
   const { id, ep } = req.query;
-
   const url = `https://megaplay.buzz/stream/mal/${id}/${ep}/sub`;
 
   let browser;
+  const allRequests = [];
+
   try {
     browser = await chromium.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     });
 
     const page = await browser.newPage();
-
     await page.setExtraHTTPHeaders({
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
     });
 
-    let streamUrl = null;
-
-    // 🔥 capture ALL requests (not just response)
-    page.on("request", (req) => {
-      const u = req.url();
-      if (!streamUrl && (u.includes(".m3u8") || u.includes(".mp4"))) {
-        console.log("🎯 FOUND STREAM:", u);
-        streamUrl = u;
+    page.on("request", (request) => {
+      const u = request.url();
+      const type = request.resourceType();
+      // capture media, xhr, fetch requests
+      if (["media", "xhr", "fetch", "other"].includes(type)) {
+        allRequests.push({ type, url: u });
       }
     });
 
-    console.log("Opening page...");
     await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
+    await page.mouse.click(300, 300);
+    await page.waitForTimeout(10000);
 
-    // 🔥 simulate user click (IMPORTANT)
-    try {
-      await page.mouse.click(300, 300);
-      console.log("Clicked player");
-    } catch {}
-
-    // 🔥 wait longer for network
-    for (let i = 0; i < 20; i++) {
-      if (streamUrl) break;
-      await page.waitForTimeout(1000);
-    }
-
-    // fallback DOM check
-    if (!streamUrl) {
-      streamUrl = await page.evaluate(() => {
-        const video = document.querySelector("video");
-        if (video?.src) return video.src;
-        const source = document.querySelector("source");
-        return source?.src ?? null;
-      });
-    }
-
-    console.log("FINAL STREAM:", streamUrl);
-
-    if (!streamUrl) throw new Error("No stream found");
-
-    res.json({ url: streamUrl });
+    res.json({ total: allRequests.length, requests: allRequests });
 
   } catch (e) {
-    console.log("❌ ERROR:", e.message);
-    res.status(500).json({ error: "Extraction failed", details: e.message });
+    res.status(500).json({ error: e.message, captured: allRequests });
   } finally {
     if (browser) await browser.close();
   }
+});
+
+app.get("/stream", async (req, res) => {
+  res.json({ message: "use /debug?id=5114&ep=1 first to find stream pattern" });
 });
 
 app.listen(10000, () => console.log("Running on 10000"));
