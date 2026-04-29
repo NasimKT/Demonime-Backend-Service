@@ -20,13 +20,13 @@ app.get("/stream", async (req, res) => {
     console.log("Launching browser...");
 
     browser = await puppeteer.launch({
+      headless: "new",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu"
-      ],
-      headless: "new"
+      ]
     });
 
     const page = await browser.newPage();
