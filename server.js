@@ -13,11 +13,10 @@ function getChromePath() {
   const chromeFolder = folders.find(f => f.includes("chrome"));
   const inner = path.join(base, chromeFolder);
   const subFolders = fs.readdirSync(inner);
-  const linuxFolder = subFolders.find(f => f.includes("linux")) ?? "";
-  return linuxFolder
-    ? path.join(inner, linuxFolder, "chrome")
-    : path.join(inner, "chrome");
+  const linuxFolder = subFolders.find(f => f.startsWith("linux"));
+  return path.join(inner, linuxFolder, "chrome");
 }
+
 
 app.get("/stream", async (req, res) => {
   const { id, ep } = req.query;
